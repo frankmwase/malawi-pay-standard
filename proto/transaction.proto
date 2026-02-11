@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package mwjson;
+
+option go_package = "github.com/frankmwase/malawi-pay-standard/pkg/mwproto";
+
+message Transaction {
+  string mw_version = 1;
+  Header header = 2;
+  Payload payload = 3;
+  TrustLayer trust_layer = 4;
+}
+
+message Header {
+  string msg_id = 1;
+  int64 timestamp = 2; // Unix timestamp
+  int32 ttl = 3;
+  string idempotency_key = 4;
+}
+
+message Payload {
+  double amount = 1;
+  string currency = 2;
+  TxType type = 3;
+  Participant sender = 4;
+  Participant receiver = 5;
+}
+
+enum TxType {
+  P2P = 0;
+  C2B = 1;
+  B2C = 2;
+}
+
+message Participant {
+  string id = 1;
+  string id_type = 2; // ENUM could be used, but string allows flexibility
+  string provider = 3; // ENUM could be used
+  string alias = 4;
+}
+
+message TrustLayer {
+  string integrity_hash = 1;
+  bool kyc_verified = 2;
+  string signature = 3;
+}
