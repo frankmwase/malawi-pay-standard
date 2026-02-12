@@ -46,3 +46,11 @@ const (
 	AttestationVerified   AttestationLevel = 2 // OTP verified
 	AttestationCertified  AttestationLevel = 3 // National ID verified
 )
+
+// RegistrationRequest is the payload for creating a new alias.
+type RegistrationRequest struct {
+	Alias        string     `json:"alias"`
+	IdentityMask string     `json:"identity_mask"`
+	Endpoints    []Endpoint `json:"endpoints"`
+	IsPrivate    bool       `json:"is_private"`
+}
