@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"strings"
 	"testing"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwals"
@@ -29,7 +30,7 @@ func TestNormalizer(t *testing.T) {
 
 func TestResolve(t *testing.T) {
 	_, privKey, _ := ed25519.GenerateKey(rand.Reader)
-	svc := mwals.NewService(privKey)
+	svc, _ := mwals.NewService(privKey, "")
 	svc.Seed(&mwals.AliasRecord{
 		Alias:             "koda_dev",
 		Status:            mwals.AliasStatusActive,
@@ -61,7 +62,7 @@ func TestResolve(t *testing.T) {
 
 func TestAttestAlias(t *testing.T) {
 	_, privKey, _ := ed25519.GenerateKey(rand.Reader)
-	svc := mwals.NewService(privKey)
+	svc, _ := mwals.NewService(privKey, "")
 	alias := "alice"
 	proof := "998877"
 	svc.Seed(&mwals.AliasRecord{
@@ -89,5 +90,56 @@ func TestReserved(t *testing.T) {
 	}
 	if mwals.IsReserved("lusekel") {
 		t.Errorf("Expected lusekel NOT to be reserved")
+	}
+}
+
+func TestRegister(t *testing.T) {
+	_, key, _ := ed25519.GenerateKey(rand.Reader)
+	svc, _ := mwals.NewService(key, "")
+
+	record := &mwals.AliasRecord{
+		Alias:        "newuser",
+		IdentityMask: "N******",
+		Endpoints: []mwals.Endpoint{
+			{Provider: "TNM", Destination: "0888111222"},
+		},
+	}
+
+	err := svc.Register(context.Background(), record)
+	if err != nil {
+		t.Fatalf("Register failed: %v", err)
+	}
+
+	// Try to register again
+	err = svc.Register(context.Background(), record)
+	if err == nil {
+		t.Error("expected error for duplicate registration, got nil")
+	}
+}
+
+func TestBlindResolution(t *testing.T) {
+	_, key, _ := ed25519.GenerateKey(rand.Reader)
+	svc, _ := mwals.NewService(key, "")
+	svc.Seed(&mwals.AliasRecord{
+		Alias:        "private_user",
+		Status:       mwals.AliasStatusActive,
+		IdentityMask: "P***********",
+		IsPrivate:    true,
+		Endpoints: []mwals.Endpoint{
+			{Priority: 1, Provider: "AIRTEL", Destination: "0999000111"},
+		},
+	})
+
+	resp, err := svc.Resolve(context.Background(), "@private_user")
+	if err != nil {
+		t.Fatalf("Resolve failed: %v", err)
+	}
+
+	if len(resp.Endpoints) == 0 {
+		t.Fatal("expected at least one endpoint")
+	}
+
+	if !strings.HasPrefix(resp.Endpoints[0].Destination, "TOKEN:") {
+		t.Errorf("expected destination to be a TOKEN, got %s", resp.Endpoints[0].Destination)
 	}
 }

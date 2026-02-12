@@ -18,7 +18,7 @@ func main() {
 
 	// 1. Setup the Alias Lookup Service (ALS)
 	_, alsKey, _ := ed25519.GenerateKey(rand.Reader)
-	als := mwals.NewService(alsKey)
+	als, _ := mwals.NewService(alsKey, "")
 	als.Seed(&mwals.AliasRecord{
 		Alias:             "mubas_cafe",
 		Status:            mwals.AliasStatusActive,

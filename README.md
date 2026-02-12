@@ -22,12 +22,12 @@ The Alias Lookup Service. A decentralized "DNS for Money."
 - **Resolve @alias** (e.g., `@chifundo`) to a bank account or phone number.
 - **Privacy-first**: Resolves to an endpoint without exposing full personal details to the sender.
 
-## 🛠 Tech Stack
+## Tech Stack
 - **Language**: Go (Golang)  chosen for its performance, concurrency, and tiny binary size.
 - **Encoding**: JSON (Standard) & Protobuf (for low bandwidth USSD/GPRS).
 - **Security**: Ed25519 for transaction signing.
 
-## 📦 Installation (For Developers)
+##  Installation (For Developers)
 To start using the standard in your Go project:
 
 ```bash
@@ -78,14 +78,14 @@ func main() {
 ##  The University Pilot
 We are focusing initial adoption on Malawian Universities (MUBAS, MUST, UNIMA, MZUNI). By deploying these standards on campus intranets, we create a high-trust laboratory where students can build apps that interact with local campus economies without needing expensive internet data.
 
-## 🤝 How to Contribute
+##  How to Contribute
 We aren't just looking for code; we are looking for Founders.
 1. **Review the Specs**: Check the code for MW-JSON 1.0 and UMQR 1.0 specifications.
 2. **Build a Driver**: Help us write the "Adapter" for different Malawian banks.
 3. **Optimize**: Help us make the binary encoding smaller for USSD systems.
 4. **Report**: Open an issue if you find an edge case in how we handle Kwacha denominations or local IDs.
 
-## 📜 Roadmap
+##  Roadmap
 - [x] **Alpha**: MW-JSON Schema & Go SDK Core.
 - [x] **Beta**: UMQR Encoder/Decoder & Example Walkthrough.
 - [x] **Gamma**: Prototype Alias Lookup Service (ALS).
