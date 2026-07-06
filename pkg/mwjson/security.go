@@ -10,7 +10,7 @@ import (
 // SignTransaction generates a signature for the transaction using the sender's private key.
 // It populates the TrustLayer.Signature field.
 func (t *Transaction) SignTransaction(privateKey ed25519.PrivateKey) error {
-	
+
 	// 1. Create the canonical string to sign
 	// We need to sign the immutable parts: Header and Payload.
 	// We exclude TrustLayer itself to avoid recursion, though IntegrityHash is part of it.
@@ -22,10 +22,10 @@ func (t *Transaction) SignTransaction(privateKey ed25519.PrivateKey) error {
 	// OR we sign a constructed string like "msg_id|timestamp|amount|sender|receiver" to be safe against JSON formatting issues.
 	// Let's go with the constructed string approach for robustness in this MVP.
 
-	canonicalString := fmt.Sprintf("%s|%s|%.2f|%s|%s",
+	canonicalString := fmt.Sprintf("%s|%s|%s|%s|%s",
 		t.Header.MsgID,
 		t.Header.Timestamp.UTC().Format(time.RFC3339),
-		t.Payload.Amount,
+		t.Payload.Amount.String(),
 		t.Payload.Sender.ID,
 		t.Payload.Receiver.ID,
 	)
@@ -49,10 +49,10 @@ func (t *Transaction) VerifySignature(publicKey ed25519.PublicKey) error {
 	}
 
 	// 1. Reconstruct Canonical String
-	canonicalString := fmt.Sprintf("%s|%s|%.2f|%s|%s",
+	canonicalString := fmt.Sprintf("%s|%s|%s|%s|%s",
 		t.Header.MsgID,
 		t.Header.Timestamp.UTC().Format(time.RFC3339),
-		t.Payload.Amount,
+		t.Payload.Amount.String(),
 		t.Payload.Sender.ID,
 		t.Payload.Receiver.ID,
 	)

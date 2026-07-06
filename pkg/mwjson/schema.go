@@ -3,6 +3,8 @@ package mwjson
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 // Global constants
@@ -29,11 +31,11 @@ type Header struct {
 
 // Payload contains the business logic of the transaction
 type Payload struct {
-	Amount   float64     `json:"amount"` // Validated for precision later
-	Currency string      `json:"currency"`
-	Type     TxType      `json:"type"`
-	Sender   Participant `json:"sender"`
-	Receiver Participant `json:"receiver"`
+	Amount   decimal.Decimal `json:"amount"` // Precise decimal type for financial amounts
+	Currency string          `json:"currency"`
+	Type     TxType          `json:"type"`
+	Sender   Participant     `json:"sender"`
+	Receiver Participant     `json:"receiver"`
 }
 
 // Participant represents a sender or receiver within the transaction

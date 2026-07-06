@@ -3,10 +3,11 @@ package mwjson
 import (
 	"errors"
 	"fmt"
-	"math"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 // Validate checks if the transaction adheres to the MW-JSON standard.
@@ -59,14 +60,14 @@ func (t *Transaction) Validate() error {
 
 // validateAmount ensures the amount is positive and has valid precision for MWK.
 // MWK is typically 2 decimal places, but often used as integer in digital retail.
-func validateAmount(amount float64) error {
-	if amount <= 0 {
+func validateAmount(amount decimal.Decimal) error {
+	if amount.IsNegative() || amount.Sign() <= 0 {
 		return NewMWError(ErrSchemaValidation, "Invalid Amount", "Must be greater than 0")
 	}
 	// Check for more than 2 decimal places
-	// Multiply by 100, checking if it's an integer
-	scaled := amount * 100
-	if math.Abs(scaled-math.Round(scaled)) > 0.000001 {
+	// Multiply by 100 and check if it's a whole number
+	scaled := amount.Mul(decimal.NewFromInt(100))
+	if !scaled.Equal(scaled.Truncate(0)) {
 		return NewMWError(ErrSchemaValidation, "Invalid Amount Precision", "MWK supports up to 2 decimal places")
 	}
 	return nil

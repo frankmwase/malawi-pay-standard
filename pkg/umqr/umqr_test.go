@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/umqr"
+	"github.com/shopspring/decimal"
 )
 
 func TestCRC16(t *testing.T) {
@@ -20,7 +21,7 @@ func TestCRC16(t *testing.T) {
 }
 
 func TestUMQREncoding(t *testing.T) {
-	qr := umqr.GenerateMerchantQR("MUBAS Cafeteria", "Blantyre", "@mubas_cafe", "AIRTEL_MONEY", 1500.00, "LUNCH-001")
+	qr := umqr.GenerateMerchantQR("MUBAS Cafeteria", "Blantyre", "@mubas_cafe", "AIRTEL_MONEY", decimal.NewFromFloat(1500.00), "LUNCH-001")
 
 	// Basic checks
 	if !strings.HasPrefix(qr, "000201") {

@@ -51,7 +51,7 @@ func NormalizeMSISDN(input string) (string, error) { ... }
 ```
 
 ### 3. Malawian Context Guidelines
-- **Precision**: While we use `float64` for the API, always validate precision to 2 decimal places (Tambala) as seen in `pkg/mwjson/validation.go`.
+- **Precision**: We use `github.com/shopspring/decimal` for financial amounts to ensure precise calculations and support multiple currency decimal precisions. Always validate precision to 2 decimal places (Tambala) as seen in `pkg/mwjson/validation.go`.
 - **Time**: **Force UTC**. All timestamps must be in UTC to avoid server-sync issues.
 - **Connectivity**: Assume the network will fail. Use the `Idempotency-Key` logic in `Header` to prevent duplicate processing.
 

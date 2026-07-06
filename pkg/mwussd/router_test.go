@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwjson"
+	"github.com/shopspring/decimal"
 )
 
 func TestGenerateAirtelSession(t *testing.T) {
 	router := NewRouter()
 	txn := &mwjson.Transaction{
 		Payload: mwjson.Payload{
-			Amount: 5000,
+			Amount: decimal.NewFromInt(5000),
 			Sender: mwjson.Participant{
 				Provider: mwjson.ProviderAirtelMoney,
 			},
@@ -42,7 +43,7 @@ func TestGenerateTNMSession(t *testing.T) {
 	router := NewRouter()
 	txn := &mwjson.Transaction{
 		Payload: mwjson.Payload{
-			Amount: 2500,
+			Amount: decimal.NewFromInt(2500),
 			Sender: mwjson.Participant{
 				Provider: mwjson.ProviderTNMPamba,
 			},

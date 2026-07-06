@@ -3,7 +3,6 @@ package mwussd
 import (
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwjson"
 )
@@ -76,8 +75,8 @@ func (r *Router) generateAirtelSession(txn *mwjson.Transaction, pin string) ([]U
 		// 4. Enter Amount
 		{
 			Action:  ActionReply,
-			Content: strconv.FormatFloat(txn.Payload.Amount, 'f', 0, 64), // No decimals for USSD usually
-			Expect:  "(?i)Enter.*PIN",                                    // Match "Enter PIN"
+			Content: txn.Payload.Amount.Truncate(0).String(), // No decimals for USSD usually
+			Expect:  "(?i)Enter.*PIN",                        // Match "Enter PIN"
 		},
 		// 5. Enter PIN
 		{
@@ -114,7 +113,7 @@ func (r *Router) generateTNMSession(txn *mwjson.Transaction, pin string) ([]Ussd
 		// 4. Enter Amount
 		{
 			Action:  ActionReply,
-			Content: strconv.FormatFloat(txn.Payload.Amount, 'f', 0, 64),
+			Content: txn.Payload.Amount.Truncate(0).String(),
 			Expect:  "(?i)Enter.*PIN",
 		},
 		// 5. Enter PIN

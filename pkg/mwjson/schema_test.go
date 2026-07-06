@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwjson"
+	"github.com/shopspring/decimal"
 )
 
 func TestTransactionValidation(t *testing.T) {
@@ -20,7 +21,7 @@ func TestTransactionValidation(t *testing.T) {
 			IdempotencyKey: "unique-key-123",
 		},
 		Payload: mwjson.Payload{
-			Amount:   15000.00,
+			Amount:   decimal.NewFromInt(15000),
 			Currency: mwjson.CurrencyMWK,
 			Type:     mwjson.TxTypeP2P,
 			Sender: mwjson.Participant{
@@ -47,11 +48,11 @@ func TestTransactionValidation(t *testing.T) {
 	}
 
 	// Test 2: Invalid Amount Precision
-	tx.Payload.Amount = 15000.123
+	tx.Payload.Amount, _ = decimal.NewFromString("15000.123")
 	if err := tx.Validate(); err == nil {
 		t.Error("Expected error for invalid amount precision, got nil")
 	}
-	tx.Payload.Amount = 15000.00 // Reset
+	tx.Payload.Amount = decimal.NewFromInt(15000) // Reset
 
 	// Test 3: Invalid MSISDN
 	tx.Payload.Sender.ID = "123"
@@ -84,7 +85,7 @@ func TestSigning(t *testing.T) {
 			IdempotencyKey: "sig-key-123",
 		},
 		Payload: mwjson.Payload{
-			Amount:   5000.00,
+			Amount:   decimal.NewFromInt(5000),
 			Currency: mwjson.CurrencyMWK,
 			Type:     mwjson.TxTypeP2P,
 			Sender: mwjson.Participant{
@@ -115,7 +116,7 @@ func TestSigning(t *testing.T) {
 	}
 
 	// Tamper
-	tx.Payload.Amount = 6000.00
+	tx.Payload.Amount = decimal.NewFromInt(6000)
 	if err := tx.VerifySignature(pubKey); err == nil {
 		t.Error("Expected verification failure after tampering, got nil")
 	}

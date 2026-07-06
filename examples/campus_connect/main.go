@@ -11,6 +11,7 @@ import (
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwals"
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwjson"
 	"github.com/frankmwase/malawi-pay-standard/pkg/umqr"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
@@ -31,7 +32,7 @@ func main() {
 
 	// 2. Merchant (Cafe) Generates a UMQR for a student to scan
 	fmt.Println("\n[Cafe] Generating Dynamic UMQR for Lunch...")
-	lunchAmount := 2500.00
+	lunchAmount := decimal.NewFromFloat(2500.00)
 	qr := umqr.GenerateMerchantQR("MUBAS Cafeteria", "Blantyre", "@mubas_cafe", "AIRTEL_MONEY", lunchAmount, "LUNCH-45")
 	fmt.Printf("Produced UMQR: %s\n", qr)
 

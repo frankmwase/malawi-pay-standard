@@ -19,7 +19,7 @@ message Header {
 }
 
 message Payload {
-  double amount = 1;
+  string amount = 1; // Use string for precise decimal representation (shopspring/decimal)
   string currency = 2;
   TxType type = 3;
   Participant sender = 4;
