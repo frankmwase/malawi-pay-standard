@@ -1,0 +1,13 @@
+genesis-file = "genesis.json"
+data-path = "/var/lib/besu"
+rpc-http-enabled = true
+rpc-http-api = ["ETH", "NET", "WEB3", "ADMIN", "DEBUG", "TXPOOL"]
+rpc-http-host = "0.0.0.0"
+rpc-http-port = 8545
+rpc-ws-enabled = true
+rpc-ws-host = "0.0.0.0"
+rpc-ws-port = 8546
+p2p-enabled = true
+p2p-host = "0.0.0.0"
+p2p-port = 30303
+min-gas-price = 0
