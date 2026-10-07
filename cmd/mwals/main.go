@@ -2,59 +2,51 @@ package main
 
 import (
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/hex"
 	"flag"
 	"log"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/frankmwase/malawi-pay-standard/pkg/mwals"
 )
 
 func main() {
-	port := flag.String("port", "8080", "HTTP port to listen on")
+	listen := flag.String("listen", "127.0.0.1:8080", "HTTP bind address (loopback by default)")
 	dataPath := flag.String("data", "als_data.json", "Path to JSON data store")
-	keyHex := flag.String("key", "", "Ed25519 private key in hex (optional)")
 	flag.Parse()
 
-	var key ed25519.PrivateKey
-	var err error
-
-	if *keyHex != "" {
-		seed, err := hex.DecodeString(*keyHex)
-		if err != nil {
-			log.Fatalf("Invalid private key hex: %v", err)
-		}
-		key = ed25519.NewKeyFromSeed(seed)
-	} else {
-		log.Println("No signing key provided. Generating a fresh one for this session...")
-		_, key, err = ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			log.Fatalf("Failed to generate key: %v", err)
-		}
-		// Print the seed so the user can save it
-		seedHex := hex.EncodeToString(key.Seed())
-		log.Printf("Session Private Key (Seed): %s", seedHex)
+	// Provision secrets out of band. Never print seeds or pass them on the command line.
+	seed, err := hex.DecodeString(os.Getenv("MW_ALS_SIGNING_SEED"))
+	if err != nil || len(seed) != ed25519.SeedSize {
+		log.Fatal("MW_ALS_SIGNING_SEED must contain a 32-byte Ed25519 seed in hex")
 	}
+	key := ed25519.NewKeyFromSeed(seed)
 
 	service, err := mwals.NewService(key, *dataPath)
 	if err != nil {
 		log.Fatalf("Failed to initialize ALS service: %v", err)
 	}
 
-	handler := mwals.NewHandler(service)
+	handler := mwals.NewAuthenticatedHandler(service, os.Getenv("MW_ALS_REGISTRATION_TOKEN"))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handler.Health)
 	mux.HandleFunc("/resolve/", handler.ServeHTTP)
-	mux.HandleFunc("/register", handler.Register)
+	// Registration is disabled unless an operator provisions a bearer token.
+	if os.Getenv("MW_ALS_REGISTRATION_TOKEN") != "" {
+		mux.HandleFunc("/register", handler.Register)
+	}
 
-	log.Printf("MW-ALS (The Discovery) starting on port %s...", *port)
-	log.Printf("Data store: %s", *dataPath)
-
+	log.Printf("MW-ALS listening on %s", *listen)
 	server := &http.Server{
-		Addr:    ":" + *port,
-		Handler: mux,
+		Addr:              *listen,
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       30 * time.Second,
 	}
 
 	if err := server.ListenAndServe(); err != nil {

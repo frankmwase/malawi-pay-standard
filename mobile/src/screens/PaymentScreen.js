@@ -1,22 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-const PaymentScreen = ({ recipient, amount, provider, onConfirm, onCancel }) => {
-    const [pin, setPin] = useState('');
-    const [isProcessing, setIsProcessing] = useState(false);
-
-    const handleConfirm = () => {
-        if (!pin) {
-            Alert.alert('Error', 'Please enter your PIN');
-            return;
-        }
-        setIsProcessing(true);
-        // Simulate processing delay
-        setTimeout(() => {
-            onConfirm(pin);
-            setIsProcessing(false);
-        }, 100);
-    };
+// Not reachable from App: retained as a read-only prototype layout.
+const PaymentScreen = ({ recipient, amount, provider, onCancel }) => {
 
     return (
         <View style={style.container}>
@@ -37,30 +23,9 @@ const PaymentScreen = ({ recipient, amount, provider, onConfirm, onCancel }) => 
                 <Text style={style.amount}>{amount}</Text>
             </View>
 
-            <Text style={style.pinLabel}>Enter PIN to Authorize:</Text>
-            <TextInput
-                style={style.pinInput}
-                secureTextEntry
-                keyboardType="numeric"
-                maxLength={4}
-                value={pin}
-                onChangeText={setPin}
-                placeholder="****"
-            />
+            <Text style={style.pinLabel}>Payments are unavailable in this prototype. Do not enter a real PIN.</Text>
 
-            <TouchableOpacity
-                style={[style.confirmButton, isProcessing && style.disabledButton]}
-                onPress={handleConfirm}
-                disabled={isProcessing}
-            >
-                {isProcessing ? (
-                    <ActivityIndicator color="white" />
-                ) : (
-                    <Text style={style.confirmButtonText}>Pay Now</Text>
-                )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={style.cancelButton} onPress={onCancel} disabled={isProcessing}>
+            <TouchableOpacity style={style.cancelButton} onPress={onCancel}>
                 <Text style={style.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
         </View>
@@ -120,35 +85,6 @@ const style = StyleSheet.create({
         marginBottom: 10,
         alignSelf: 'flex-start',
         marginLeft: 10,
-    },
-    pinInput: {
-        width: '100%',
-        height: 50,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        fontSize: 18,
-        textAlign: 'center',
-        marginBottom: 20,
-        color: '#212121',
-    },
-    confirmButton: {
-        width: '100%',
-        height: 55,
-        backgroundColor: '#2E7D32',
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-    },
-    disabledButton: {
-        backgroundColor: '#A5D6A7',
-    },
-    confirmButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
     },
     cancelButton: {
         padding: 15,

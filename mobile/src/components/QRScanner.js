@@ -1,21 +1,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-// Placeholder for react-native-vision-camera
-// Will implement actual camera logic once dependencies are installed.
-const QRScanner = ({ onRead, onClose }) => {
+// No camera integration is shipped yet. Do not simulate a payment QR in a user build.
+const QRScanner = ({ onClose }) => {
     return (
         <View style={styles.container}>
             <View style={styles.cameraPlaceholder}>
-                <Text style={styles.placeholderText}>Camera Feed</Text>
-                <Text style={styles.placeholderSubText}>(Simulated)</Text>
-
-                <TouchableOpacity
-                    style={styles.simulateButton}
-                    onPress={() => onRead("mw:1.0:TXN-MOCK:...")}
-                >
-                    <Text style={styles.simulateButtonText}>Simulate Scan</Text>
-                </TouchableOpacity>
+                <Text style={styles.placeholderText}>QR scanning unavailable</Text>
+                <Text style={styles.placeholderSubText}>This prototype cannot process payments. A verified camera and payment integration are required.</Text>
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -49,15 +41,6 @@ const styles = StyleSheet.create({
     placeholderSubText: {
         color: '#757575',
         marginBottom: 20,
-    },
-    simulateButton: {
-        backgroundColor: '#E0E0E0',
-        padding: 10,
-        borderRadius: 5,
-    },
-    simulateButtonText: {
-        color: 'black',
-        fontWeight: '600',
     },
     closeButton: {
         position: 'absolute',

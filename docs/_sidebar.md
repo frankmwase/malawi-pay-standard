@@ -1,5 +1,6 @@
 - [Home](README.md)
 - [Getting Started](getting-started.md)
+- [Pilot Readiness](pilot-readiness.md)
 
 - **Specifications**
   - [MW-JSON (Transactions)](spec-mw-json.md)

@@ -1,11 +1,11 @@
 # MW-JSON Standard (v1.0)
 
-MW-JSON is the official transaction data model for the Malawi Pay Standard. It ensures that transaction data is consistent, signed, and verifiable across all Malawian nodes.
+MW-JSON is an experimental Go transaction data model. No institution has certified this schema or a network protocol around it.
 
 ## Core Principles
-- **Idempotency**: Every request must be idempotent to prevent double-charging on Malawian mobile networks.
-- **Normalization**: Phone numbers (MSISDNs) are automatically normalized to the `265...` format.
-- **Security**: Mandatory Ed25519 cryptographic signing for every transaction.
+- **Idempotency**: A key is required by `Validate()`, but deduplication and replay protection must be implemented by the payment processor.
+- **Normalization**: Call `NormalizeMSISDN()` explicitly; `Validate()` rejects non-normalized MSISDNs and does not mutate the transaction.
+- **Security**: Signing and verification are separate Go SDK operations; `Validate()` alone does not authenticate a transaction. Signatures cover version, header, and payload using Go `encoding/json` struct serialization. Cross-language canonicalization and key discovery are unspecified.
 
 ## Data Structure
 
@@ -22,12 +22,13 @@ MW-JSON is the official transaction data model for the Malawi Pay Standard. It e
     "amount": 5000.00,
     "currency": "MWK",
     "type": "C2B",
-    "sender": { "id": "265881234567", "alias": "@john" },
-    "receiver": { "id": "265991122334", "alias": "@mubas_cafe" }
+    "sender": { "id": "265881234567", "id_type": "MSISDN", "provider": "TNM_MPAMBA", "alias": "@john" },
+    "receiver": { "id": "265991122334", "id_type": "MSISDN", "provider": "AIRTEL_MONEY", "alias": "@mubas_cafe" }
   },
   "trust_layer": {
-    "signature": "...",
-    "pub_key": "..."
+    "integrity_hash": "",
+    "kyc_verified": false,
+    "extension_signature": "ed25519-signature-in-hex"
   }
 }
 ```
@@ -35,7 +36,9 @@ MW-JSON is the official transaction data model for the Malawi Pay Standard. It e
 ## Error Codes
 | Code | Meaning | Context |
 |------|---------|---------|
-| `MW001` | Insufficient Funds | Sender has less than `Amount` |
-| `MW002` | MSISDN Invalid | Phone number format error |
-| `MW003` | Signature Mismatch | Trust Layer verification failed |
-| `MW004` | TTL Expired | Transaction sent too long ago |
+| `MW400` | Schema validation | Invalid field, including MSISDN format |
+| `MW401` | Invalid signature | Verification failed |
+| `MW408` | Expired transaction | TTL exceeded |
+| `MW409` | Duplicate transaction | Reserved for processor-side idempotency handling |
+
+The SDK does not verify KYC flags, integrity hashes or ownership of payment endpoints. Use the named key and a durable replay store in any processor.

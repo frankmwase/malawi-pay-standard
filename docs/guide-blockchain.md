@@ -1,21 +1,11 @@
 # Blockchain Registry Guide
 
-For national-scale interoperability, the Malawi Pay Standard utilizes a **Decentralized Registry** built on Hyperledger Besu.
+The repository contains an **experimental Besu configuration, genesis and Solidity contract**, not a deployed national registry. The running ALS server does not connect to Besu. No bank participation, consensus deployment, indexing/synchronization, or security audit is evidenced here.
 
 ## Technical Stack
 - **Engine**: Hyperledger Besu (IBFT 2.0 Consensus).
-- **Network**: Private Malawian Sidechain (Consortium managed).
-- **ChainID**: 650
+- **Network**: Example private-network configuration only (no consortium deployment).
+- **ChainID**: Check the actual genesis configuration before running any node.
 
 ## Smart Contract: MWAliasRegistry
-Aliases are registered on-chain to ensure every bank in Malawi sees the same "Source of Truth".
-
-### Registration Flow
-1. Bank verifies customer identity (KYC).
-2. Bank node calls `registerAlias()` on the smart contract.
-3. All other banks' ALS nodes automatically sync the new alias.
-
-## Advantages
-- **No Single Owner**: No single entity can "shut down" or "censor" an alias.
-- **Auditability**: Every alias change is recorded permanently on the ledger.
-- **Transparency**: Real-time resolution regardless of which bank the sender uses.
+The contract is a design experiment; no synchronization from contract events into ALS is implemented. The JSON-backed server is currently the only running registry implementation. Before proposing on-chain identity records, review privacy, key custody, access control, contract upgrades, fees and data retention with local stakeholders. The sample Besu RPC binds to loopback by default; never expose privileged RPC APIs to the Internet.

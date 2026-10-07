@@ -1,33 +1,8 @@
-/**
- * StandardParser.js
- * Implements the logic from pkg/umqr and pkg/mwjson in TypeScript
- * for the React Native application.
- */
-
-export const parseMalawiQR = (rawTagData) => {
-    // Simplified TLV Parsing logic from pkg/umqr
-    // Real implementation would loop through the string parsing Tags and Lengths
-
-    // Mock logic to show structure:
-    if (!rawTagData.startsWith("mw:")) {
-        throw new Error("Invalid Standard Prefix");
-    }
-
-    // Example expected structure: mw:1.0:TXN:AIRTEL:0999123456:5000:SIG...
-    const parts = rawTagData.split(":");
-
-    if (parts.length < 6) {
-        throw new Error("Malformed QR Data");
-    }
-
-    return {
-        version: parts[1],
-        type: parts[2], // e.g., TXN
-        provider: parts[3], // e.g., AIRTEL_MONEY
-        recipient: parts[4],
-        amount: parseFloat(parts[5]),
-        signature: parts[6] || null,
-    };
+// Payment parsing is disabled until the EMV-style TLV/CRC parser and recipient
+// verification are implemented and independently tested. Never treat the old
+// `mw:` demo string as a payment instruction.
+export const parseMalawiQR = () => {
+    throw new Error('QR payment parsing is not available in this prototype');
 };
 
 export const formatAirtelNumber = (num) => {

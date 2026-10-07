@@ -3,75 +3,47 @@ package mwjson
 import (
 	"crypto/ed25519"
 	"encoding/hex"
-	"fmt"
-	"time"
+	"encoding/json"
 )
 
-// SignTransaction generates a signature for the transaction using the sender's private key.
-// It populates the TrustLayer.Signature field.
+// signingBytes serializes every payment-relevant field in a fixed Go struct order.
+// This is a Go SDK signing format, not a cross-language JSON canonicalization standard.
+func (t *Transaction) signingBytes() ([]byte, error) {
+	return json.Marshal(struct {
+		Version string  `json:"mw_version"`
+		Header  Header  `json:"header"`
+		Payload Payload `json:"payload"`
+	}{t.MWVersion, t.Header, t.Payload})
+}
+
+// SignTransaction signs the version, header and complete payload (not the mutable trust layer).
 func (t *Transaction) SignTransaction(privateKey ed25519.PrivateKey) error {
-
-	// 1. Create the canonical string to sign
-	// We need to sign the immutable parts: Header and Payload.
-	// We exclude TrustLayer itself to avoid recursion, though IntegrityHash is part of it.
-	// A common pattern is to sign the hash of the payload + header.
-
-	// Concatenate Header + Payload
-	// In a real spec, we'd need a very strict canonicalization (e.g., JCS).
-	// For this standard, we'll assume the byte buffer matches what is sent,
-	// OR we sign a constructed string like "msg_id|timestamp|amount|sender|receiver" to be safe against JSON formatting issues.
-	// Let's go with the constructed string approach for robustness in this MVP.
-
-	canonicalString := fmt.Sprintf("%s|%s|%s|%s|%s",
-		t.Header.MsgID,
-		t.Header.Timestamp.UTC().Format(time.RFC3339),
-		t.Payload.Amount.String(),
-		t.Payload.Sender.ID,
-		t.Payload.Receiver.ID,
-	)
-
-	// 2. Sign
-	signature := ed25519.Sign(privateKey, []byte(canonicalString))
-
-	// 3. Encode to Hex and set
-	t.TrustLayer.Signature = hex.EncodeToString(signature)
-
-	// Can also set integrity hash (SHA256 of the canonical string or payload) .... good for "TrustLayer"
-	// t.TrustLayer.IntegrityHash = ... (Skipping for now as Signature covers it)
-
+	if len(privateKey) != ed25519.PrivateKeySize {
+		return NewMWError(ErrInvalidSignature, "Invalid private key", "")
+	}
+	data, err := t.signingBytes()
+	if err != nil {
+		return err
+	}
+	t.TrustLayer.Signature = hex.EncodeToString(ed25519.Sign(privateKey, data))
 	return nil
 }
 
-// VerifySignature checks if the transaction signature is valid for the given public key.
+// VerifySignature checks the complete signed transaction against the supplied public key.
 func (t *Transaction) VerifySignature(publicKey ed25519.PublicKey) error {
-	if t.TrustLayer.Signature == "" {
-		return NewMWError(ErrInvalidSignature, "Missing Signature", "")
+	if len(publicKey) != ed25519.PublicKeySize {
+		return NewMWError(ErrInvalidSignature, "Invalid public key", "")
 	}
-
-	// 1. Reconstruct Canonical String
-	canonicalString := fmt.Sprintf("%s|%s|%s|%s|%s",
-		t.Header.MsgID,
-		t.Header.Timestamp.UTC().Format(time.RFC3339),
-		t.Payload.Amount.String(),
-		t.Payload.Sender.ID,
-		t.Payload.Receiver.ID,
-	)
-
-	// 2. Decode Signature
-	sigBytes, err := hex.DecodeString(t.TrustLayer.Signature)
+	sig, err := hex.DecodeString(t.TrustLayer.Signature)
+	if err != nil || len(sig) != ed25519.SignatureSize {
+		return NewMWError(ErrInvalidSignature, "Invalid signature format", "")
+	}
+	data, err := t.signingBytes()
 	if err != nil {
-		return NewMWError(ErrInvalidSignature, "Invalid Signature Format", "Not Hex")
+		return err
 	}
-
-	if len(sigBytes) != ed25519.SignatureSize {
-		return NewMWError(ErrInvalidSignature, "Invalid Signature Length", "")
+	if !ed25519.Verify(publicKey, data, sig) {
+		return NewMWError(ErrInvalidSignature, "Signature verification failed", "")
 	}
-
-	// 3. Verify
-	valid := ed25519.Verify(publicKey, []byte(canonicalString), sigBytes)
-	if !valid {
-		return NewMWError(ErrInvalidSignature, "Signature Verification Failed", "")
-	}
-
 	return nil
 }

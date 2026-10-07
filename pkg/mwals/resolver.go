@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -47,12 +49,15 @@ type AliasRecord struct {
 	IdentityMask      string
 	Attestation       AttestationLevel
 	Endpoints         []Endpoint
-	VerificationProof string
+	VerificationProof string `json:"-"` // Ephemeral challenge; never persist or return it.
 	// IsPrivate indicates that endpoints should be returned as signed tokens (Blind Resolution)
 	IsPrivate bool
 }
 
 func NewService(key ed25519.PrivateKey, dataPath string) (*Service, error) {
+	if len(key) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("an Ed25519 signing key is required")
+	}
 	s := &Service{
 		store:           make(map[string]*AliasRecord),
 		signingKey:      key,
@@ -76,33 +81,76 @@ func (s *Service) load() error {
 		return err
 	}
 
-	return json.Unmarshal(data, &s.store)
+	if err := json.Unmarshal(data, &s.store); err != nil {
+		return err
+	}
+	if s.store == nil {
+		return fmt.Errorf("registry must be a JSON object")
+	}
+	for alias, record := range s.store {
+		if record == nil || !aliasPattern.MatchString(alias) {
+			return fmt.Errorf("invalid stored alias record")
+		}
+	}
+	return nil
 }
 
-func (s *Service) save() error {
+// saveLocked writes a private, atomic snapshot while the caller holds s.mu.
+func (s *Service) saveLocked() error {
 	if s.persistencePath == "" {
 		return nil
 	}
-
-	s.mu.RLock()
 	data, err := json.MarshalIndent(s.store, "", "  ")
-	s.mu.RUnlock()
-
 	if err != nil {
 		return err
 	}
-
-	return os.WriteFile(s.persistencePath, data, 0644)
+	path := filepath.Clean(s.persistencePath)
+	file, err := os.CreateTemp(filepath.Dir(path), ".als-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+	if err := file.Chmod(0600); err != nil {
+		return err
+	}
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), path)
 }
+
+func copyRecord(record *AliasRecord) *AliasRecord {
+	copy := *record
+	copy.Endpoints = append([]Endpoint(nil), record.Endpoints...)
+	for i := range copy.Endpoints {
+		copy.Endpoints[i].SupportedMethods = append([]string(nil), record.Endpoints[i].SupportedMethods...)
+	}
+	return &copy
+}
+
+var aliasPattern = regexp.MustCompile(`^[a-z0-9_]{3,32}$`)
 
 // Resolve implements the Resolver interface.
 func (s *Service) Resolve(ctx context.Context, alias string) (*ResolutionResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	clean := Normalizer(alias)
-
-	record, ok := s.store[clean]
+	s.mu.RLock()
+	stored, ok := s.store[clean]
 	if !ok {
+		s.mu.RUnlock()
 		return nil, fmt.Errorf("alias not found: %s", alias)
 	}
+	record := copyRecord(stored)
+	s.mu.RUnlock()
 
 	if record.Status == AliasStatusSuspended {
 		return nil, fmt.Errorf("alias is suspended")
@@ -119,12 +167,10 @@ func (s *Service) Resolve(ctx context.Context, alias string) (*ResolutionRespons
 	for i, ep := range record.Endpoints {
 		resp.Endpoints[i] = ep
 		if record.IsPrivate {
-			// Blind the destination with a signed resolution token
-			// token = provider|dest|expiry signed by ALS
-			expiry := time.Now().Add(10 * time.Minute).Format(time.RFC3339)
+			// Prototype blind token only: no redemption API exists yet.
+			expiry := time.Now().UTC().Add(10 * time.Minute).Format(time.RFC3339)
 			payload := fmt.Sprintf("%s|%s|%s", ep.Provider, ep.Destination, expiry)
 			sig := ed25519.Sign(s.signingKey, []byte(payload))
-
 			resp.Endpoints[i].Destination = fmt.Sprintf("TOKEN:%s:%s", hex.EncodeToString(sig), expiry)
 		}
 	}
@@ -140,47 +186,57 @@ func (s *Service) Resolve(ctx context.Context, alias string) (*ResolutionRespons
 }
 
 func (s *Service) signResponse(resp *ResolutionResponse) (string, error) {
-	if s.signingKey == nil {
-		return "unsigned", nil
+	// SecuritySig is empty until after serialization. All returned fields are covered.
+	data, err := json.Marshal(resp)
+	if err != nil {
+		return "", err
 	}
-
-	// Create canonical string for signing
-	// format: alias|status|timestamp|endpoint_count
-	canonical := fmt.Sprintf("%s|%s|%s|%d",
-		resp.Alias,
-		resp.Status,
-		resp.ResolutionTimestamp.Format(time.RFC3339),
-		len(resp.Endpoints),
-	)
-
-	sig := ed25519.Sign(s.signingKey, []byte(canonical))
-	return hex.EncodeToString(sig), nil
+	return hex.EncodeToString(ed25519.Sign(s.signingKey, data)), nil
 }
 
-// Seed adds a record to the mock store.
+// Seed adds a record to the in-memory store for test/demo use only.
 func (s *Service) Seed(record *AliasRecord) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.store[Normalizer(record.Alias)] = record
+	s.store[Normalizer(record.Alias)] = copyRecord(record)
 }
 
-// Register adds a new alias to the service.
+// Register adds a new alias and persists it before reporting success.
 func (s *Service) Register(ctx context.Context, record *AliasRecord) error {
-	if IsReserved(record.Alias) {
-		return fmt.Errorf("alias is reserved: %s", record.Alias)
+	if err := ctx.Err(); err != nil {
+		return err
 	}
-
+	if record == nil {
+		return fmt.Errorf("record is required")
+	}
 	clean := Normalizer(record.Alias)
-
-	s.mu.Lock()
-	if _, exists := s.store[clean]; exists {
-		s.mu.Unlock()
-		return fmt.Errorf("alias already registered: %s", record.Alias)
+	if !aliasPattern.MatchString(clean) || IsReserved(clean) {
+		return fmt.Errorf("invalid or reserved alias")
 	}
-	s.store[clean] = record
-	s.mu.Unlock()
-
-	return s.save()
+	if record.IsPrivate {
+		return fmt.Errorf("private registrations require a token redemption service")
+	}
+	if len(record.Endpoints) == 0 || len(record.Endpoints) > 10 {
+		return fmt.Errorf("between 1 and 10 endpoints required")
+	}
+	for _, ep := range record.Endpoints {
+		if ep.Provider == "" || ep.Destination == "" || len(ep.Destination) > 128 {
+			return fmt.Errorf("endpoint provider and destination required (max 128 bytes)")
+		}
+	}
+	clone := copyRecord(record)
+	clone.Alias = clean
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.store[clean]; exists {
+		return fmt.Errorf("alias already registered: %s", clean)
+	}
+	s.store[clean] = clone
+	if err := s.saveLocked(); err != nil {
+		delete(s.store, clean)
+		return fmt.Errorf("persist registration: %w", err)
+	}
+	return nil
 }
 
 // IsReserved checks for sensitive aliases.
@@ -198,28 +254,24 @@ func IsReserved(alias string) bool {
 // AttestAlias simulates the trust level upgrade process.
 func (s *Service) AttestAlias(alias string, level AttestationLevel, proof string) error {
 	clean := Normalizer(alias)
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	record, ok := s.store[clean]
 	if !ok {
 		return fmt.Errorf("alias not found")
 	}
-
-	// Validation logic without hardcoded values
-	switch level {
-	case AttestationVerified:
-		// Check against the record's specific expected proof (e.g. dynamic OTP)
-		if record.VerificationProof == "" {
-			return fmt.Errorf("no verification challenge pending for this alias")
-		}
-		if proof != record.VerificationProof {
-			return fmt.Errorf("invalid verification proof")
-		}
-	case AttestationCertified:
-		// Suppose proof is a signed NRIS blob
-		if !strings.HasPrefix(proof, "NRIS-") {
-			return fmt.Errorf("invalid NRIS attestation proof: missing identity certificate prefix")
-		}
+	if level != AttestationVerified {
+		return fmt.Errorf("only verification with an issued challenge is supported")
 	}
-
+	if record.VerificationProof == "" || proof != record.VerificationProof {
+		return fmt.Errorf("invalid or missing verification proof")
+	}
+	previous := copyRecord(record)
 	record.Attestation = level
+	record.VerificationProof = ""
+	if err := s.saveLocked(); err != nil {
+		s.store[clean] = previous
+		return fmt.Errorf("persist attestation: %w", err)
+	}
 	return nil
 }

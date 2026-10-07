@@ -36,6 +36,15 @@ func (r *Router) GenerateSession(txn *mwjson.Transaction, pin string) ([]UssdSte
 	if txn == nil {
 		return nil, errors.New("transaction cannot be nil")
 	}
+	if !txn.Payload.Amount.IsPositive() || !txn.Payload.Amount.Equal(txn.Payload.Amount.Truncate(0)) {
+		return nil, errors.New("USSD amount must be a positive whole MWK value")
+	}
+	if _, err := mwjson.NormalizeMSISDN(txn.Payload.Receiver.ID); err != nil {
+		return nil, fmt.Errorf("invalid recipient number: %w", err)
+	}
+	if pin == "" {
+		return nil, errors.New("PIN is required")
+	}
 
 	// Route based on sender's provider (who is initiating the USSD?)
 	senderProvider := txn.Payload.Sender.Provider

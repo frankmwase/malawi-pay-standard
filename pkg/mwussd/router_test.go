@@ -65,4 +65,9 @@ func TestGenerateTNMSession(t *testing.T) {
 	if steps[0].Action != ActionDial || steps[0].Content != "*444#" {
 		t.Errorf("Step 1 failed: Expected DIAL *444#, got %v %v", steps[0].Action, steps[0].Content)
 	}
+
+	txn.Payload.Amount = decimal.RequireFromString("2500.50")
+	if _, err := router.GenerateSession(txn, "9999"); err == nil {
+		t.Error("fractional payment must not be silently truncated")
+	}
 }

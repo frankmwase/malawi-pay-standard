@@ -1,57 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, Switch, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 const SettingsScreen = ({ onBack }) => {
-    const [sessionUnique, setSessionUnique] = useState(false);
-    const [defaultSim, setDefaultSim] = useState('SIM 1');
-    const [airtelPin, setAirtelPin] = useState('');
-    const [tnmPin, setTnmPin] = useState('');
-
-    const toggleSwitch = () => setSessionUnique(previousState => !previousState);
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Settings</Text>
 
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Security</Text>
-                <View style={styles.row}>
-                    <Text style={styles.label}>Session Unique PIN</Text>
-                    <Switch
-                        trackColor={{ false: "#767577", true: "#81b0ff" }}
-                        thumbColor={sessionUnique ? "#2196F3" : "#f4f3f4"}
-                        onValueChange={toggleSwitch}
-                        value={sessionUnique}
-                    />
-                </View>
+                <Text style={styles.sectionTitle}>Prototype only</Text>
                 <Text style={styles.helperText}>
-                    If enabled, you will be asked for a PIN every time. If disabled, the app uses the stored PIN.
+                    No payment authorization, secure PIN storage, or QR camera is available. Never enter a real payment PIN in this prototype.
                 </Text>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Stored PINs</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Airtel Money PIN"
-                    secureTextEntry
-                    keyboardType="numeric"
-                    maxLength={4}
-                    value={airtelPin}
-                    onChangeText={setAirtelPin}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="TNM Mpamba PIN"
-                    secureTextEntry
-                    keyboardType="numeric"
-                    maxLength={4}
-                    value={tnmPin}
-                    onChangeText={setTnmPin}
-                />
-                <TouchableOpacity style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>Save PINs securely</Text>
-                </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
@@ -85,39 +45,10 @@ const styles = StyleSheet.create({
         marginBottom: 15,
         color: '#424242',
     },
-    row: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 5,
-    },
-    label: {
-        fontSize: 16,
-        color: '#212121',
-    },
     helperText: {
-        fontSize: 12,
-        color: '#757575',
+        fontSize: 14,
+        color: '#424242',
         marginTop: 5,
-    },
-    input: {
-        height: 50,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        marginBottom: 15,
-        fontSize: 16,
-    },
-    saveButton: {
-        backgroundColor: '#2196F3',
-        padding: 15,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    saveButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
     },
     backButton: {
         marginTop: 20,

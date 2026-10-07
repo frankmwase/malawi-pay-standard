@@ -12,6 +12,9 @@ import (
 
 // Validate checks if the transaction adheres to the MW-JSON standard.
 func (t *Transaction) Validate() error {
+	if t == nil {
+		return NewMWError(ErrSchemaValidation, "Missing transaction", "")
+	}
 	// 1. Basic Field Checks
 	if t.MWVersion != MWJSONVersion {
 		return NewMWError(ErrSchemaValidation, "Invalid MW-JSON Version", fmt.Sprintf("Expected %s, got %s", MWJSONVersion, t.MWVersion))
@@ -27,15 +30,18 @@ func (t *Transaction) Validate() error {
 	if t.Header.Timestamp.IsZero() {
 		return NewMWError(ErrSchemaValidation, "Missing Timestamp", "")
 	}
-	// Force UTC check (or at least awareness) - The user asked to "Force UTC"
-	if t.Header.Timestamp.Location() != time.UTC {
+	if t.Header.Timestamp.Format("-07:00") != "+00:00" {
 		return NewMWError(ErrSchemaValidation, "Timestamp must be in UTC", "")
 	}
-	// Check/Enforce TTL
-	if t.Header.TTL <= 0 {
-		return NewMWError(ErrSchemaValidation, "Invalid TTL", "Must be positive integer")
+	// Bound TTL to prevent arbitrarily long replay windows and avoid duration overflow.
+	if t.Header.TTL <= 0 || t.Header.TTL > 3600 {
+		return NewMWError(ErrSchemaValidation, "Invalid TTL", "Must be between 1 and 3600 seconds")
 	}
-	if time.Since(t.Header.Timestamp) > time.Duration(t.Header.TTL)*time.Second {
+	age := time.Since(t.Header.Timestamp)
+	if age < -time.Minute {
+		return NewMWError(ErrSchemaValidation, "Future timestamp", "Clock skew exceeds one minute")
+	}
+	if age > time.Duration(t.Header.TTL)*time.Second {
 		return NewMWError(ErrGhostTransaction, "Transaction Expired", "TTL exceeded")
 	}
 
@@ -45,6 +51,9 @@ func (t *Transaction) Validate() error {
 	}
 	if err := validateAmount(t.Payload.Amount); err != nil {
 		return err
+	}
+	if t.Payload.Type != TxTypeP2P && t.Payload.Type != TxTypeC2B && t.Payload.Type != TxTypeB2C {
+		return NewMWError(ErrSchemaValidation, "Invalid transaction type", "")
 	}
 
 	// 4. Participants (Sender/Receiver)
@@ -81,8 +90,11 @@ func (p *Participant) Validate() error {
 	if p.Provider == "" {
 		return errors.New("missing Provider")
 	}
+	if p.IDType != IDTypeMSISDN && p.IDType != IDTypeNRIS && p.IDType != IDTypeIBAN {
+		return errors.New("invalid ID type")
+	}
 
-	// MSISDN Mormalization & Validation
+	// MSISDN validation (normalization is an explicit caller operation)
 	if p.IDType == IDTypeMSISDN {
 		normalized, err := NormalizeMSISDN(p.ID)
 		if err != nil {

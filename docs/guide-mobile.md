@@ -1,20 +1,5 @@
 # Mobile USSD Router Guide
 
-The Malawi Pay Standard includes a reference implementation for a **Mobile USSD Router**. This allows Android devices to act as automated gateways for Airtel Money and TNM Mpamba.
+The mobile app is a **non-payment UI prototype**. Its camera and payment paths are disabled; there is no Android/iOS native telephony module, secure PIN overlay, SIM detection, production QR parser, or payment middleware. Never enter a real PIN or attempt a live transaction with this app.
 
-## How it Works
-1. **Request**: The app receives an MW-JSON payment request (via QR or Deep Link).
-2. **Routing**: The app identifies the provider (e.g., Airtel) and selects the correct SIM card.
-3. **Execution**: The app uses the **Accessibility Service** to dial USSD codes (e.g., `*211#`) and navigate through the menus automatically.
-
-## Native Integration
-The core logic is implemented in Java/Kotlin to provide high-performance telephony access:
-
-```java
-// Example of dialing a carrier-specific USSD code
-mTelephonyManager.sendUssdRequest("*211#", callback, handler);
-```
-
-## Security
-- **Sandbox**: The USSD router only executes codes authorized by the MW-Standard middleware.
-- **Privacy**: No PINs are stored locally; they are entered by the user via a secure native overlay.
+The Go package `mwussd` generates **hypothetical** Airtel/TNM menu steps. Carrier menus and dialing codes are not verified, and generated steps must not be executed automatically. It rejects fractional MWK amounts rather than silently rounding them. Real deployment needs agreements with providers, device/security review, user consent, tested menu flows, failure handling and authorization. See the pilot readiness checklist in the README.

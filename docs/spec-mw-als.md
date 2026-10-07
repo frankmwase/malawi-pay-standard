@@ -1,18 +1,12 @@
 # Malawi Alias Lookup Service (MW-ALS)
 
-The MW-ALS acts as the "Discovery" layer. It translates human-readable aliases into actionable financial endpoints.
-
-## The Hybrid Model
-MW-ALS uses a **Hybrid Trust Model**:
-1. **Source of Truth**: A Hyperledger Besu blockchain (Ethereum-compatible) managed by Malawian banks.
-2. **Local Cache**: JSON-based storage on local server nodes for performance and offline reliability.
+The MW-ALS prototype resolves human-readable aliases from a single local JSON store. It is not certified, federated or connected to a bank-operated blockchain. `HybridService` and the Besu contract are separate experimental components, not wired into the running HTTP server.
 
 ## Resolving an Alias
-Send a `GET` request to any certified ALS node:
-`GET /resolve/@chifundo`
+A loopback development node supports `GET /resolve/@chifundo`. Its Ed25519 response signature covers all returned fields, but clients still need a trusted public key. Endpoints registered by an operator are **not verified as owned by the named account holder**.
 
-### Response (Blind Token Mode)
-To protect privacy, the ALS returns a **Blind Token** for private endpoints instead of a phone number:
+### Legacy prototype blind-token illustration
+Manually seeded private records can return opaque tokens; there is no redemption API. New private registrations are disabled, so these tokens must not be used for payment routing:
 
 ```json
 {
@@ -31,4 +25,4 @@ To protect privacy, the ALS returns a **Blind Token** for private endpoints inst
 ```
 
 ## Registering an Alias
-A `POST /register` request with an identity certificate (e.g., NRIS hash) is required to claim an alias.
+`POST /register` is disabled unless `MW_ALS_REGISTRATION_TOKEN` is configured. Then send an operator bearer token; the request is limited to 16 KiB and aliases must match 3–32 lowercase letters, numbers or underscores (an optional `@` is accepted). This is **operator authentication only**, not identity certification or proof of destination ownership. Never permit untrusted callers to register payment destinations. See [pilot readiness](pilot-readiness.md).

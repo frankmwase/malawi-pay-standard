@@ -14,7 +14,7 @@ We are looking for contributions from everyone: students, professional engineers
 ## 🛠 Getting Started
 
 ### Prerequisites
-- **Go**: Version 1.21 or later.
+- **Go**: Version 1.24.1 or later (see the module directive).
 - **Git**: Basic knowledge of branching and PRs.
 - **Knowledge**: Familiarity with EMVCo QR standards and JSON/Protobuf.
 
@@ -53,7 +53,7 @@ func NormalizeMSISDN(input string) (string, error) { ... }
 ### 3. Malawian Context Guidelines
 - **Precision**: We use `github.com/shopspring/decimal` for financial amounts to ensure precise calculations and support multiple currency decimal precisions. Always validate precision to 2 decimal places (Tambala) as seen in `pkg/mwjson/validation.go`.
 - **Time**: **Force UTC**. All timestamps must be in UTC to avoid server-sync issues.
-- **Connectivity**: Assume the network will fail. Use the `Idempotency-Key` logic in `Header` to prevent duplicate processing.
+- **Connectivity**: Assume the network will fail. The `Header.IdempotencyKey` is metadata; payment processors must implement persistent deduplication and reconciliation.
 
 ## 🧪 Testing
 "If it isn't tested, it doesn't exist."

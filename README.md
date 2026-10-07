@@ -10,17 +10,17 @@ In Malawi, our digital economy is trapped in "Walled Gardens." Airtel Money, TNM
 
 ### 1. MW-JSON (The Language)
 A standardized, lightweight JSON schema for transactions. It abstracts the complexity of different providers into a single object.
-- **Interoperable**: Works across all wallets and banks.
-- **Resilient**: Includes TTL  and Idempotency keys for Malawi’s spotty network conditions.
-- **Secure**: Features a built in TrustLayer for cryptographic signatures using Ed25519.
+- **Provider-neutral data model**: Describes wallet/bank transactions; provider adapters are not implemented.
+- **Replay metadata**: Includes a bounded TTL and idempotency key; consumers must implement durable deduplication themselves.
+- **Signed SDK messages**: Go Ed25519 helpers sign the version, header and full payload; key distribution and cross-language canonicalization are not specified.
 
 ### 2. UMQR (The Interface)
-The Universal Malawian QR Code. Based on EMVCo standards, UMQR allows a single sticker to accept payments from any compliant app. No more "QR clutter" on merchant desks.
+An experimental EMV-style TLV/CRC encoder for merchant QR payloads. It is **not certified EMVCo interoperability**: there is no validated decoder or end-to-end payment integration, and generated fields are not yet length-checked.
 
 ### 3. MW-ALS (The Discovery)
-The Alias Lookup Service. A decentralized "DNS for Money."
-- **Resolve @alias** (e.g., `@chifundo`) to a bank account or phone number.
-- **Privacy-first**: Resolves to an endpoint without exposing full personal details to the sender.
+A local JSON-backed alias lookup prototype, not a decentralized production directory.
+- Resolves aliases to stored endpoints and signs complete responses.
+- Public registrations require operator authorization; **endpoint ownership is not verified**. Private token redemption, KYC and blockchain-backed verification are not implemented.
 
 ## Tech Stack
 - **Language**: Go (Golang)  chosen for its performance, concurrency, and tiny binary size.
@@ -36,47 +36,39 @@ go get github.com/frankmwase/malawi-pay-standard
 
 ### Quick Example: Create a Standard Transaction
 ```go
+package main
+
 import (
+    "log"
     "time"
+
     "github.com/frankmwase/malawi-pay-standard/pkg/mwjson"
+    "github.com/shopspring/decimal"
 )
 
 func main() {
-    // Create a new transaction (using the schema)
     txn := &mwjson.Transaction{
-        MWVersion: "1.0",
+        MWVersion: mwjson.MWJSONVersion,
         Header: mwjson.Header{
-            MsgID: "TXN-123",
-            Timestamp: time.Now().UTC(),
-            TTL: 300,
-            IdempotencyKey: "unique-key",
+            MsgID: "TXN-123", Timestamp: time.Now().UTC(),
+            TTL: 300, IdempotencyKey: "unique-key",
         },
         Payload: mwjson.Payload{
-            Amount: 15000.00,
-            Currency: "MWK",
+            Amount: decimal.NewFromInt(15000), Currency: mwjson.CurrencyMWK,
             Type: mwjson.TxTypeP2P,
-            Sender: mwjson.Participant{
-                ID: "26599...",
-                IDType: mwjson.IDTypeMSISDN,
-                Provider: mwjson.ProviderAirtelMoney,
-            },
-            Receiver: mwjson.Participant{
-                ID: "26588...",
-                IDType: mwjson.IDTypeMSISDN,
-                Provider: mwjson.ProviderTNMPamba,
-            },
+            Sender: mwjson.Participant{ID: "265991234567", IDType: mwjson.IDTypeMSISDN, Provider: mwjson.ProviderAirtelMoney},
+            Receiver: mwjson.Participant{ID: "265881234567", IDType: mwjson.IDTypeMSISDN, Provider: mwjson.ProviderTNMPamba},
         },
     }
-
-    // Validate the transaction against Malawian regulations
     if err := txn.Validate(); err != nil {
-        log.Fatal("Invalid Transaction: ", err)
+        log.Fatal(err)
     }
+    // SignTransaction requires a securely provisioned Ed25519 private key.
 }
 ```
 
-##  The University Pilot
-We are focusing initial adoption on Malawian Universities (MUBAS, MUST, UNIMA, MZUNI). By deploying these standards on campus intranets, we create a high-trust laboratory where students can build apps that interact with local campus economies without needing expensive internet data.
+## Pilot status
+This is a **prototype for synthetic-data demonstrations only**, not a usable payment network or a deployable university payment app. A campus intranet does not replace provider authorization, TLS or payment controls. See the [pilot readiness checklist](docs/pilot-readiness.md) for release blockers and operator guidance.
 
 ##  How to Contribute
 We aren't just looking for code; we are looking for Founders.
@@ -87,8 +79,9 @@ We aren't just looking for code; we are looking for Founders.
 
 ##  Roadmap
 - [x] **Alpha**: MW-JSON Schema & Go SDK Core.
-- [x] **Beta**: UMQR Encoder/Decoder & Example Walkthrough.
-- [x] **Gamma**: Prototype Alias Lookup Service (ALS).
+- [ ] **Beta**: Validated UMQR encoder/decoder and independently tested interoperability.
+- [x] **Prototype**: Local alias lookup service (ALS).
+- [ ] **Pilot readiness**: Provider authorization, QR camera and payment integration, security review, and operational runbooks.
 - [ ] **V1.0**: National Interoperability Framework Proposal.
 
 > "If you want to go fast, go alone. If you want to go far, go together." 

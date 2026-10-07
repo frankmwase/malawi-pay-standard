@@ -4,16 +4,16 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 const HomeScreen = ({ onScanPress, onHistoryPress, onSettingsPress }) => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Malawi Pay</Text>
-            <Text style={styles.subtitle}>Universal Digital Exchange</Text>
+            <Text style={styles.title}>Malawi Pay Prototype</Text>
+            <Text style={styles.subtitle}>Demonstration UI — no live payments</Text>
 
             <View style={styles.card}>
-                <Text style={styles.balanceLabel}>Wallet Status</Text>
-                <Text style={styles.balanceValue}>Ready to Scan</Text>
+                <Text style={styles.balanceLabel}>Payment Status</Text>
+                <Text style={styles.balanceValue}>Unavailable</Text>
             </View>
 
             <TouchableOpacity style={styles.scanButton} onPress={onScanPress}>
-                <Text style={styles.scanButtonText}>Scan QR Code</Text>
+                <Text style={styles.scanButtonText}>QR Integration Status</Text>
             </TouchableOpacity>
 
             <View style={styles.row}>
